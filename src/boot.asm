@@ -1,31 +1,33 @@
 [org 0x7c00]
-;mov ah, 0x0e ; enable tty
 
-mov bx, HELLO_MSG
-call print_string
-call print_newline
+    mov [BOOT_DRIVE], dl
 
-mov bx, GOODBYE_MSG
-call print_string
-call print_newline
+    mov bp, 0x8000 ; set stack in open memory
+    mov sp, bp
 
-call print_newline
-call print_newline
+    mov bx, 0x9000 ; load 5 sectors to 0x0000(ES):0x9000(BX)
+    mov dh, 5
+    mov dl, [BOOT_DRIVE]
+    call load_disk
 
-mov dx, 0x1234
-call print_hex
+    mov dx, [0x9000]
+    call print_hex  ; print first loaded word, which should be 0xdada
+
+    mov dx, [0x9000 + 512]
+    call print_hex  ; print first word from second loaded sector, should be 0xface
+
+    jmp $
+
+    %include "src/print.asm"
+    %include "src/disk_read.asm"
 
 
-jmp $
+BOOT_DRIVE: db 0
 
-%include "src/print.asm"
-
-HELLO_MSG:
-    db 'Hello, World!', 0
-
-GOODBYE_MSG:
-    db 'Goodbye!', 0
 
 ; zero padding and magic bios number
 times 510-($-$$) db 0
 dw 0xaa55
+
+times 256 dw 0xdada
+times 256 dw 0xface
