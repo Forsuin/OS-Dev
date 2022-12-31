@@ -1,33 +1,34 @@
 [org 0x7c00]
 
-    mov [BOOT_DRIVE], dl
-
-    mov bp, 0x8000 ; set stack in open memory
+    mov bp, 0x9000  ; set up stack
     mov sp, bp
 
-    mov bx, 0x9000 ; load 5 sectors to 0x0000(ES):0x9000(BX)
-    mov dh, 5
-    mov dl, [BOOT_DRIVE]
-    call load_disk
+    mov bx, MSG_REAL_MODE
+    call print_string
 
-    mov dx, [0x9000]
-    call print_hex  ; print first loaded word, which should be 0xdada
-
-    mov dx, [0x9000 + 512]
-    call print_hex  ; print first word from second loaded sector, should be 0xface
+    call switch_to_pm   ; never return from here
 
     jmp $
 
-    %include "src/print.asm"
-    %include "src/disk_read.asm"
+%include "src/print.asm"
+%include "src/GDT.asm"
+%include "src/print_PM.asm"
+%include "src/PMSwitch.asm"
 
+[bits 32]
+; this is where we arrive after switching to protected mode
 
-BOOT_DRIVE: db 0
+BEGIN_PM:
+    mov ebx, MSG_PROT_MODE
+    call print_string_pm
 
+    jmp $
+
+MSG_REAL_MODE:
+    db "Started in 16-bit Real Mode", 0
+MSG_PROT_MODE:
+    db "Successfully landed in 32-bit Protected Mode", 0
 
 ; zero padding and magic bios number
 times 510-($-$$) db 0
 dw 0xaa55
-
-times 256 dw 0xdada
-times 256 dw 0xface
